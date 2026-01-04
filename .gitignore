@@ -1,0 +1,102 @@
+# ====================
+# Binaries & Build
+# ====================
+bin/
+dist/
+.build/
+
+# ====================
+# Database
+# ====================
+*.db
+*.db-wal
+*.db-shm
+
+# ====================
+# Environment
+# ====================
+.env
+.env.*
+!.env.example
+
+# ====================
+# OS
+# ====================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ====================
+# IDE & Editors
+# ====================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# ====================
+# Go
+# ====================
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+vendor/
+# Go workspace (if used locally)
+go.work
+go.work.sum
+
+# ====================
+# Node.js / Bun
+# ====================
+node_modules/
+.npm/
+.pnpm-store/
+*.tsbuildinfo
+.turbo/
+.cache/
+
+# ====================
+# Bun specific
+# ====================
+bun.lockb
+*.bun
+
+# ====================
+# Svelte / Vite (UI)
+# ====================
+web/dist/
+ui/dist/
+ui/node_modules/
+ui/.svelte-kit/
+ui/build/
+.svelte-kit/
+
+# ====================
+# Logs & Debug
+# ====================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ====================
+# Testing
+# ====================
+.nyc_output/
+
+# ====================
+# Misc
+# ====================
+*.bak
+*.tmp
+*.temp
+.cache/

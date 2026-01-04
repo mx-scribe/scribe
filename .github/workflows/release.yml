@@ -1,0 +1,182 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  # Run lint and test before release
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install UI dependencies
+        run: cd web && bun install
+
+      - name: Build UI
+        run: cd web && bun run build
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: latest
+          args: --timeout=5m
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install UI dependencies
+        run: cd web && bun install
+
+      - name: Build UI
+        run: cd web && bun run build
+
+      - name: Run tests
+        run: |
+          mkdir -p .build
+          go test -race -coverprofile=.build/coverage.out -covermode=atomic ./...
+
+  release:
+    name: Create Release
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install UI dependencies
+        run: cd web && bun install
+
+      - name: Build UI
+        run: cd web && bun run build
+
+      - name: Build for all platforms
+        run: |
+          mkdir -p builds
+          VERSION=${GITHUB_REF_NAME#v}
+          LDFLAGS="-s -w -X github.com/mx-scribe/scribe/internal/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ) -X github.com/mx-scribe/scribe/internal/version.GitCommit=$(git rev-parse --short HEAD)"
+
+          # Linux
+          GOOS=linux GOARCH=amd64 go build -ldflags="$LDFLAGS" -o builds/scribe-${VERSION}-linux-amd64 ./cmd/scribe
+          GOOS=linux GOARCH=arm64 go build -ldflags="$LDFLAGS" -o builds/scribe-${VERSION}-linux-arm64 ./cmd/scribe
+
+          # Windows
+          GOOS=windows GOARCH=amd64 go build -ldflags="$LDFLAGS" -o builds/scribe-${VERSION}-windows-amd64.exe ./cmd/scribe
+
+          # macOS
+          GOOS=darwin GOARCH=amd64 go build -ldflags="$LDFLAGS" -o builds/scribe-${VERSION}-macos-amd64 ./cmd/scribe
+          GOOS=darwin GOARCH=arm64 go build -ldflags="$LDFLAGS" -o builds/scribe-${VERSION}-macos-arm64 ./cmd/scribe
+
+      - name: Compress release files
+        run: |
+          cd builds
+          VERSION=${GITHUB_REF_NAME#v}
+
+          # Versioned archives
+          zip scribe-${VERSION}-windows-amd64.zip scribe-${VERSION}-windows-amd64.exe
+          tar -czvf scribe-${VERSION}-linux-amd64.tar.gz scribe-${VERSION}-linux-amd64
+          tar -czvf scribe-${VERSION}-linux-arm64.tar.gz scribe-${VERSION}-linux-arm64
+          tar -czvf scribe-${VERSION}-macos-amd64.tar.gz scribe-${VERSION}-macos-amd64
+          tar -czvf scribe-${VERSION}-macos-arm64.tar.gz scribe-${VERSION}-macos-arm64
+
+          # Latest archives (for /releases/latest/download/ links)
+          cp scribe-${VERSION}-windows-amd64.zip scribe-windows-amd64.zip
+          cp scribe-${VERSION}-linux-amd64.tar.gz scribe-linux-amd64.tar.gz
+          cp scribe-${VERSION}-linux-arm64.tar.gz scribe-linux-arm64.tar.gz
+          cp scribe-${VERSION}-macos-amd64.tar.gz scribe-macos-amd64.tar.gz
+          cp scribe-${VERSION}-macos-arm64.tar.gz scribe-macos-arm64.tar.gz
+
+          ls -la
+
+      - name: Generate checksums
+        run: |
+          cd builds
+          sha256sum *.zip *.tar.gz > checksums.txt
+          cat checksums.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          fail_on_unmatched_files: false
+          files: |
+            builds/*.zip
+            builds/*.tar.gz
+            builds/checksums.txt
+          body: |
+            ## SCRIBE ${{ github.ref_name }}
+
+            Smart logging for humans. Single binary. Zero dependencies.
+
+            ### Quick Start
+
+            ```bash
+            # Download and extract
+            tar -xzf scribe-*.tar.gz
+
+            # Start server
+            ./scribe serve
+
+            # Visit http://localhost:8080
+            ```
+
+            ### Features
+
+            - Beautiful dashboard with dark mode
+            - Smart pattern matching for auto-severity
+            - Real-time SSE updates
+            - JSON/CSV export
+            - CLI and HTTP API
+            - SQLite storage (no external DB needed)
+
+            ### Verify Download
+
+            ```bash
+            sha256sum -c checksums.txt
+            ```
+
+            ---
+
+            **Built with love by [Mendex](https://mendex.io)**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
