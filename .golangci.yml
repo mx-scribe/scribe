@@ -1,0 +1,87 @@
+version: "2"
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - dogsled
+    - dupl
+    - errcheck
+    - funlen
+    - goconst
+    - gocritic
+    - gocyclo
+    - gosec
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - nakedret
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+  settings:
+    dupl:
+      threshold: 150
+    funlen:
+      lines: 150
+      statements: 80
+    goconst:
+      min-len: 3
+      min-occurrences: 5
+    gocritic:
+      disabled-checks:
+        - ifElseChain
+        - wrapperFunc
+        - hugeParam
+      enabled-tags:
+        - diagnostic
+        - performance
+    gocyclo:
+      min-complexity: 40
+    lll:
+      line-length: 140
+    misspell:
+      locale: US
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - dupl
+          - funlen
+          - goconst
+        path: _test\.go
+      - linters:
+          - dupl
+          - funlen
+        path: internal/patterns/rules
+    paths:
+      - .*\.pb\.go$
+      - vendor
+      - web/node_modules
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/mx-scribe/scribe
+  exclusions:
+    generated: lax
+    paths:
+      - .*\.pb\.go$
+      - vendor
+      - web/node_modules
+      - third_party$
+      - builtin$
+      - examples$
